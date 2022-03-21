@@ -1,21 +1,50 @@
-# some hashing functions
+print_message <- function(x, include_mem = FALSE) {
+    if (include_mem) {
+        mem <- system("ps auxww | grep 'scripts/profile.R' | grep slave | grep -v 'grep' | awk -v OFS='\t' '$1=$1' | cut -f6", intern = TRUE)
+        if (length(mem) > 0) {
+            mem <- paste0(paste0(round(as.integer(mem) / 2 ** 20, 3), collapse = ", "), " - ")
+        } else {
+            mem <- ""
+        }
+    } else {
+        mem <- ""
+    }
+    message(
+        paste0(
+            "[", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "] ", mem, x
+        )
+    )
+}
+
+
+check_mclapply_OK <- function(out, stop_message = "An error occured during QUILT. The first such error is above") {
+    te <- (sapply(out, class) == "try-error") | sapply(out, is.null)
+    if (sum(te) > 0) {
+        print_message(out[[which(te)[1]]]) # print first error
+        stop(stop_message)
+    }
+    return(NULL)
+}
+
+
+
+
+## some hashing functions
 hashF=function(x,K) sum(x*4^(0:(K-1)))
 hashFC=function(x,K) sum((3-x[K:1])*4^(0:(K-1)))
 hashM=function(x,K)  min(hashF(x,K),hashFC(x,K))
 conv=function(x,K) 3-x[K:1]
 
-simonHash2=function(seqv,K)
-{
-  # fixed from simonHash - was backwards!!!
-  nonrep=array(0,length(seqv)-K+1)
-  for(i in 1:K)
-  {
-    z=seqv[i:(i+length(nonrep)-1)]
-    nonrep=nonrep+4^(i-1)*z # flipped K-i to i-K
-    nonrep[z>3]=-Inf
-  }
-  nonrep2=nonrep[!is.infinite(nonrep)]+1
-  return(nonrep2)
+simonHash2 <- function(seqv,K) {
+    ## fixed from simonHash - was backwards!!!
+    nonrep <- array(0,length(seqv)-K+1)
+    for(i in 1:K) {
+        z=seqv[i:(i+length(nonrep)-1)]
+        nonrep=nonrep+4^(i-1)*z # flipped K-i to i-K
+        nonrep[z>3]=-Inf
+    }
+    nonrep2 <- nonrep[!is.infinite(nonrep)]+1
+    return(nonrep2)
 }
   
 

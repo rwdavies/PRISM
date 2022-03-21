@@ -6,6 +6,8 @@
 \usage{
 getMotifs(
   hot,
+  seqsH,
+  seqsC,
   hotExclude = NULL,
   eligible = NULL,
   nCores = 1,
@@ -16,6 +18,7 @@ getMotifs(
   simpleRepeats = NULL,
   discovery = TRUE,
   initializationMethod = "advanced",
+  dataType = "normal",
   pwmValue = 0.9,
   alpha = 0.5,
   incprob = 0.99999,
@@ -37,6 +40,10 @@ getMotifs(
 \arguments{
 \item{hot}{A set of hotspots}
 
+\item{seqsH}{A list of hotspots (use initializationMethod advanced, dataType sequence)}
+
+\item{seqsC}{A list of coldspots (use initializationMethod advanced, dataType sequence)}
+
 \item{hotExclude}{Hotspots to exclude (for instance, if these are known to contain matches to another motif)}
 
 \item{eligible}{k-mers already used as seeds (or NULL)}
@@ -50,6 +57,8 @@ getMotifs(
 \item{simpleRepeats}{Path to simple repeats file (assumes preparation already performed)}
 
 \item{initializationMethod}{Whether to initialize using a single top k-mer (simple), by constructing a rudimentary PWM (advanced), or to use pre-existing motif probabilities (existing)}
+
+\item{dataType}{Whether input data is sequences (sequence) or chromosome and fasta based}
 
 \item{pwmValue}{If initializing simply, the probability the PWM contains the sequence of the k-mer}
 

@@ -269,152 +269,335 @@ callHotspots=function(prefix,suffix,chrList,minRate=10,minFrac=0.8,minLength=100
 #' @param simpleRepeats Path to simple repeats file
 #' @param verbose whether to print messages. 2 = frequent, 1 = moderate, 0 = No
 #' @export
-getEnrichment=function(chrList,hot,hotExclude=NULL,hotspotCenterDist=200,K=8,nCores=1,filterSequences=TRUE,rmsk=NULL,simpleRepeats=NULL,verbose=1)
-{
-  #
-  if(verbose>=1) print(paste("Perform searching for motif enrichment, ",date(),sep=""))
-  #
-  # check columns of hotspots
-  if(sum(is.na(match(c("Chr","Pos_start_bp","Pos_end_bp"),colnames(hot))))>0)
-    stop("hotspot matrix column names don't include necessary columns")
-  #
-  #
-  if(verbose>=1) print(paste("Loading sequences of chromosomes and motifs, ",date(),sep=""))
-  #
-  # get sequence of the motifs
-  out=mclapply(chrList,mc.cores=nCores,function(chr) {
-    #
-    if(verbose>=2) print(paste("Load chromosome ",chr,", ",date(),sep=""))
-    # load ref
-    load(paste(fasta,".",chr,".RData",sep=""))
-    ref[ref==-1]=4 
-    # mask out repeats
-    if(filterSequences==TRUE)
-    {
-      load(paste(rmsk,".",chr,".RData",sep=""))
-      for(i in 1:nrow(mask)) ref[ (mask[i,"genoStart"]+1):mask[i,"genoEnd"]]=4
-      # mask out simple repeats
-      load(paste(simpleRepeats,".",chr,".RData",sep=""))
-      for(i in 1:nrow(rep)) ref[ (rep[i,"chromStart"]+1):rep[i,"chromEnd"]]=4
-    }
-    #
-    # mask our previous hotspots
-    #
-    if(length(hotExclude)>0)
-    {
-      coldL=hotExclude[hotExclude[,"Chr"]==chr,]
-      if(length(coldL)>0)
-      {
-        for(i in 1:nrow(coldL))
-          ref[coldL[i,2]:coldL[i,3]]=4
-      }
-    }
-    #
-    # get hotspots
-    #
-    hotL=hot[hot[,"Chr"]==chr,]
-    seqs=lapply(1:nrow(hotL),function(i) {
-      x=hotL[i,]
-      return(ref[as.integer(x["Pos_start_bp"]):as.integer(x["Pos_end_bp"])])
+getEnrichment <- function(
+    chrList,
+    hot,
+    hotExclude = NULL,
+    hotspotCenterDist = 200,
+    K = 8,
+    nCores = 1,
+    filterSequences = TRUE,
+    rmsk = NULL,
+    simpleRepeats = NULL,
+    verbose = 1
+) {
+
+    if(verbose>=1)
+        print(paste("Perform searching for motif enrichment, ",date(),sep=""))
+
+    ## check columns of hotspots
+    if(sum(is.na(match(c("Chr","Pos_start_bp","Pos_end_bp"),colnames(hot))))>0)
+        stop("hotspot matrix column names don't include necessary columns")
+
+    if(verbose>=1)
+        print(paste("Loading sequences of chromosomes and motifs, ",date(),sep=""))
+
+    ## get sequence of the motifs
+    out <- mclapply(
+        chrList,
+        mc.cores = nCores,
+        function(chr) {
+
+        if(verbose>=2)
+            print(paste("Load chromosome ",chr,", ",date(),sep=""))
+        
+        ## load ref
+        load(paste(fasta,".",chr,".RData",sep=""))
+        ref[ref==-1]=4 
+        ## mask out repeats
+        if(filterSequences==TRUE) {
+            load(paste(rmsk,".",chr,".RData",sep=""))
+            for(i in 1:nrow(mask)) ref[ (mask[i,"genoStart"]+1):mask[i,"genoEnd"]]=4
+            ## mask out simple repeats
+            load(paste(simpleRepeats,".",chr,".RData",sep=""))
+            for(i in 1:nrow(rep)) ref[ (rep[i,"chromStart"]+1):rep[i,"chromEnd"]]=4
+        }
+        ##
+        ## mask our previous hotspots
+        ##
+        if(length(hotExclude)>0)
+        {
+            coldL=hotExclude[hotExclude[,"Chr"]==chr,]
+            if(length(coldL)>0)
+            {
+                for(i in 1:nrow(coldL))
+                    ref[coldL[i,2]:coldL[i,3]]=4
+            }
+        }
+        ##
+        ## get hotspots
+        ##
+        hotL=hot[hot[,"Chr"]==chr,]
+        seqs=lapply(1:nrow(hotL),function(i) {
+            x=hotL[i,]
+            return(ref[as.integer(x["Pos_start_bp"]):as.integer(x["Pos_end_bp"])])
+        })
+        ## in hotspot, in middle 200 bases
+        hotC=t(apply(hotL[,c("Pos_start_bp","Pos_end_bp")],1,function(x) {
+            x=as.integer(x)
+            a1=round(mean(x)-hotspotCenterDist)
+            a2=round(mean(x)+hotspotCenterDist)
+            return(c(max(a1,x[1]),min(a2,x[2])))
+        }))
+
+        
+        ## get positions of those within or outside 
+        inhotCenter=unique(unlist(apply(hotC,1,function(x) seq(x[1],x[2]))))
+        hotL2=cbind(as.integer(hotL[,2]),as.integer(hotL[,3]))
+        inhot=unique(unlist(apply(hotL2,1,function(x) seq(x[1],x[2]))))
+        inhotEdges=setdiff(inhot,inhotCenter)
+        ## get the sequences involved!
+        hotCenterSeq=ref[inhotCenter]
+        hotEdgesSeq=ref[inhotEdges]        
+        coldSeq=ref[-inhot] ## rest of genome!
+        ## hash
+        hotCenterSeqH=simonHash2(hotCenterSeq,K)
+        hotEdgesSeqH=simonHash2(hotEdgesSeq,K) 
+        coldSeqH=simonHash2(coldSeq,K)  
+        ## count - note - simonHash2 is 1-based, so remove first entry
+        hotCenterSeqC=increment(y=as.numeric(hotCenterSeqH),yT=as.integer(length(hotCenterSeqH)),xT=as.integer(4^K))[-1]
+        hotEdgesSeqC=increment(y=as.numeric(hotEdgesSeqH),yT=as.integer(length(hotEdgesSeqH)),xT=as.integer(4^K))[-1]
+        coldSeqC=increment(y=as.numeric(coldSeqH),yT=as.integer(length(coldSeqH)),xT=as.integer(4^K))[-1]
+        ## return counts
+        if(verbose>=2) print(paste("Done chromosome ",chr,", ",date(),sep=""))    
+        return(
+            list(
+                hotCenterSeqC = hotCenterSeqC,
+                hotEdgesSeqC = hotEdgesSeqC,
+                coldSeqC = coldSeqC,
+                seqs = seqs
+            )
+        )
     })
-    # in hotspot, in middle 200 bases
-    hotC=t(apply(hotL[,c("Pos_start_bp","Pos_end_bp")],1,function(x)     {
-      x=as.integer(x)
-      a1=round(mean(x)-hotspotCenterDist)
-      a2=round(mean(x)+hotspotCenterDist)
-      return(c(max(a1,x[1]),min(a2,x[2])))
-    }))
-    # get positions of those within or outside 
-    inhotCenter=unique(unlist(apply(hotC,1,function(x) seq(x[1],x[2]))))
-    hotL2=cbind(as.integer(hotL[,2]),as.integer(hotL[,3]))
-    inhot=unique(unlist(apply(hotL2,1,function(x) seq(x[1],x[2]))))
-    inhotEdges=setdiff(inhot,inhotCenter)
-    # get the sequences involved!
-    hotCenterSeq=ref[inhotCenter]
-    hotEdgesSeq=ref[inhotEdges]        
-    coldSeq=ref[-inhot] # rest of genome!
-    # save
-    #if(is.na(tempdir)==FALSE) {
-    #  coldSeqM=matrix(coldSeq,nrow=1)
-    #  save(coldSeqM,file=paste(tempdir,"chr",chr,".cold.RData",sep=""))
-    #}
-    # hash
-    hotCenterSeqH=simonHash2(hotCenterSeq,K)
-    hotEdgesSeqH=simonHash2(hotEdgesSeq,K) 
-    coldSeqH=simonHash2(coldSeq,K)  
-    # count - note - simonHash2 is 1-based, so remove first entry
-    hotCenterSeqC=increment(y=as.numeric(hotCenterSeqH),yT=as.integer(length(hotCenterSeqH)),xT=as.integer(4^K))[-1]
-    hotEdgesSeqC=increment(y=as.numeric(hotEdgesSeqH),yT=as.integer(length(hotEdgesSeqH)),xT=as.integer(4^K))[-1]
-    coldSeqC=increment(y=as.numeric(coldSeqH),yT=as.integer(length(coldSeqH)),xT=as.integer(4^K))[-1]
-    # return counts
-    if(verbose>=2) print(paste("Done chromosome ",chr,", ",date(),sep=""))    
-    return(list(hotCenterSeqC=hotCenterSeqC,hotEdgesSeqC=hotEdgesSeqC,coldSeqC=coldSeqC,seqs=seqs))
-  })
-  names(out)=chrList
-  #
-  # check for errors
-  #
-  a=sapply(out,function(x) length(x))
-  if(sum(a!=4)>0) {
-    print("WARNING - getEnrichment failed")
-    print(out[[which.min(a<4)]])
-  }
-  #
-  # get sequences
-  #
-  seqs=as.list(sum(unlist(lapply(out,function(x) length(x$seqs)))))
-  c=1
-  for(j in 1:length(out))
-  {
-    n=length(out[[j]]$seqs)
-    seqs[c:(c+n-1)]=out[[j]]$seqs
-    c=c+n
-  }
-  #
-  # sum counts
-  #
-  if(verbose>=1)   print(paste("Add results, build matrices, ",date(),sep=""))
-  #
-  #
-  hotCenterSeq=array(0,4**K)
-  for(i in chrList) hotCenterSeq=hotCenterSeq + out[[as.character(i)]][[1]]
-  hotEdgesSeq=array(0,4**K)
-  for(i in chrList) hotEdgesSeq=hotEdgesSeq + out[[as.character(i)]][[2]]
-  coldSeq=array(0,4**K)
-  for(i in chrList) coldSeq=coldSeq + out[[as.character(i)]][[3]]
-  #
-  # get OR and p!
-  #
-  if(verbose>=1)   print(paste("Get ORs and p-values, ",date(),sep=""))
-  hashLink=buildHashLink(K)  
-  #
-  #
-  # original - hotspots versus rest of genome
-  #
-  x=apply(hashLink[,(ncol(hashLink)+1-K):ncol(hashLink)],1,hashF,K=K) + 1 #re-order?
-  compO1=makeCompO2(r=cbind(hotCenterSeq[x]+ hotEdgesSeq[x],coldSeq[x]),which=array(TRUE,4**K),hashLink=hashLink,K=K,num=2)
-  out1=getORAndP(compO=compO1,K=K,num=2,nCores=nCores,verbose=FALSE,data=NULL,gc.content=NULL,CG=NULL,version="robbie",comp2=NULL,outFile=NULL,cgte=0,pvalmet="chisq",rgte=0)
-  #
-  # also - hotspots vs edges
-  #
-  compO2=makeCompO2(r=cbind(hotCenterSeq[x],hotEdgesSeq[x]),which=array(TRUE,4**K),hashLink=hashLink,K=K,num=2)
-  out2=getORAndP(compO=compO2,K=K,num=2,nCores=nCores,verbose=FALSE,data=NULL,gc.content=NULL,CG=NULL,version="robbie",comp2=NULL,outFile=NULL,cgte=0,pvalmet="chisq",rgte=0)
-  #
-  # also - hotspots in two parts vs rest of genome
-  #
-  compO3=makeCompO2(r=cbind(hotCenterSeq[x],hotEdgesSeq[x],coldSeq[x]),which=array(TRUE,4**K),hashLink=hashLink,K=K,num=3)
-  out3=getORAndP(compO=compO3,K=K,num=3,nCores=nCores,verbose=FALSE,data=NULL,gc.content=NULL,CG=NULL,version="robbie",comp2=NULL,outFile=NULL,cgte=0,pvalmet="chisq",rgte=0)
-  #
-  # return! both matrices
-  #
-  compX1=cbind(out1$p[,1],out1$or[,1],compO1)
-  compX1=compX1[order(compX1[,1]),]
-  compX2=cbind(out2$p[,1],out2$or[,1],compO2)
-  compX2=compX2[order(compX2[,1]),]
-  compX3=cbind(out3$p,out3$or,compO3)
-  compX3=compX3[order(compX3[,1]),]
-  if(verbose>=1) print(paste("Done searching for motif enrichment, ",date(),sep=""))
-  return(list(compX1=compX1,compX2=compX2,compX3=compX3,seqs=seqs))
+    names(out) <- chrList
+
+    ##
+    ## check for errors
+    ##
+    a=sapply(out,function(x) length(x))
+    if(sum(a!=4)>0) {
+        print("WARNING - getEnrichment failed")
+        print(out[[which.min(a<4)]])
+    }
+    
+    ##
+    ## get sequences
+    ##
+    seqs <- as.list(sum(unlist(lapply(out,function(x) length(x$seqs)))))
+    c=1
+    for(j in 1:length(out)) {
+        n=length(out[[j]]$seqs)
+        seqs[c:(c+n-1)]=out[[j]]$seqs
+        c=c+n
+    }
+    ##
+    ## sum counts
+    ##
+    if(verbose>=1)   print(paste("Add results, build matrices, ",date(),sep=""))
+    ##
+    ##
+    hotCenterSeq=array(0,4**K)
+    for(i in chrList) hotCenterSeq=hotCenterSeq + out[[as.character(i)]][[1]]
+    hotEdgesSeq=array(0,4**K)
+    for(i in chrList) hotEdgesSeq=hotEdgesSeq + out[[as.character(i)]][[2]]
+    coldSeq=array(0,4**K)
+    for(i in chrList) coldSeq=coldSeq + out[[as.character(i)]][[3]]
+    ##
+    ## get OR and p!
+    ##
+    if(verbose>=1)   print(paste("Get ORs and p-values, ",date(),sep=""))
+    hashLink=buildHashLink(K)  
+    ##
+    ##
+    ## original - hotspots versus rest of genome
+    ##
+    x=apply(hashLink[,(ncol(hashLink)+1-K):ncol(hashLink)],1,hashF,K=K) + 1 ##re-order?
+    compO1=makeCompO2(r=cbind(hotCenterSeq[x]+ hotEdgesSeq[x],coldSeq[x]),which=array(TRUE,4**K),hashLink=hashLink,K=K,num=2)
+    out1=getORAndP(compO=compO1,K=K,num=2,nCores=nCores,verbose=FALSE,data=NULL,gc.content=NULL,CG=NULL,version="robbie",comp2=NULL,outFile=NULL,cgte=0,pvalmet="chisq",rgte=0)
+    ##
+    ## also - hotspots vs edges
+    ##
+    compO2=makeCompO2(r=cbind(hotCenterSeq[x],hotEdgesSeq[x]),which=array(TRUE,4**K),hashLink=hashLink,K=K,num=2)
+    out2=getORAndP(compO=compO2,K=K,num=2,nCores=nCores,verbose=FALSE,data=NULL,gc.content=NULL,CG=NULL,version="robbie",comp2=NULL,outFile=NULL,cgte=0,pvalmet="chisq",rgte=0)
+    ##
+    ## also - hotspots in two parts vs rest of genome
+    ##
+    compO3=makeCompO2(r=cbind(hotCenterSeq[x],hotEdgesSeq[x],coldSeq[x]),which=array(TRUE,4**K),hashLink=hashLink,K=K,num=3)
+    out3=getORAndP(compO=compO3,K=K,num=3,nCores=nCores,verbose=FALSE,data=NULL,gc.content=NULL,CG=NULL,version="robbie",comp2=NULL,outFile=NULL,cgte=0,pvalmet="chisq",rgte=0)
+    ##
+    ## return! both matrices
+    ##
+    compX1=cbind(out1$p[,1],out1$or[,1],compO1)
+    compX1=compX1[order(compX1[,1]),]
+    compX2=cbind(out2$p[,1],out2$or[,1],compO2)
+    compX2=compX2[order(compX2[,1]),]
+    compX3=cbind(out3$p,out3$or,compO3)
+    compX3=compX3[order(compX3[,1]),]
+    if(verbose>=1) print(paste("Done searching for motif enrichment, ",date(),sep=""))
+    return(
+        list(
+            compX1 = compX1,
+            compX2 = compX2,
+            compX3 = compX3,
+            seqs = seqs
+        )
+    )
+}
+
+
+
+
+
+
+
+#' @title Get enrichment for a set of hotspots
+#' @param seqsH hotspot sequences
+#' @param seqsC coldspot sequences
+#' @param hotCenterDist Distance from hotspot centre each way to look for enrichment
+#' @param K k-mer length to seed over
+#' @param nCores How many computer cores to use
+#' @param filterSequences Whether to filter hotspots for repeats and simple repeats
+#' @param rmsk Path to repeat masker file
+#' @param simpleRepeats Path to simple repeats file
+#' @param verbose whether to print messages. 2 = frequent, 1 = moderate, 0 = No
+#' @export
+getEnrichmentFromSequences <- function(
+    seqsH,
+    seqsC,
+    hotspotCenterDist = 200,
+    K = 8,
+    verbose = 1,
+    nCores = 1
+) {
+
+    if(verbose>=1)
+        print_message("Perform searching for motif enrichment")
+
+
+    hotCenterSeq <- array(0,4**K)
+    hotEdgesSeq <- array(0,4**K)
+
+    for(seq in seqsH) {
+        
+        middle <- round(nchar(seq) / 2)
+        a1 <- round(middle - hotspotCenterDist)
+        a2 <- round(middle + hotspotCenterDist)
+        
+        hotCenterSeqX <- match(strsplit(substr(seq, a1, a2), "")[[1]], c("A", "C", "G", "T", "N"))
+        hotCenterSeqH <- simonHash2(hotCenterSeqX,K)
+        hotCenterSeq <- hotCenterSeq + increment(
+            y = as.numeric(hotCenterSeqH),
+            yT = as.integer(length(hotCenterSeqH)),
+            xT = as.integer(4^K)
+        )[-1]
+        
+        hotEdgesSeqX <- match(
+            c(
+                strsplit(substr(seq, 1, a1 - 1), "")[[1]],
+                strsplit(substr(seq, a2 + 1, nchar(seq)), "")[[1]]
+            ),
+            c("A", "C", "G", "T", "N")
+        )
+        hotEdgesSeqH <- simonHash2(hotEdgesSeqX,K)
+        hotEdgesSeq <- hotEdgesSeq + increment(
+            y = as.numeric(hotEdgesSeqH),
+            yT = as.integer(length(hotEdgesSeqH)),
+            xT = as.integer(4^K)
+        )[-1]
+        
+    }
+
+    coldSeq <- array(0, 4 ** K)
+    
+    for(seq in seqsC) {
+        
+        middle <- round(nchar(seq) / 2)
+        a1 <- round(middle - hotspotCenterDist)
+        a2 <- round(middle + hotspotCenterDist)
+        
+        coldSeqX <- match(strsplit(seq, "")[[1]], c("A", "C", "G", "T", "N"))
+        coldSeqH <- simonHash2(coldSeqX,K)
+        coldSeqC <- increment(
+            y = as.numeric(coldSeqH),
+            yT = as.integer(length(coldSeqH)),
+            xT = as.integer(4^K)
+        )[-1]
+        
+    }
+    
+    if(verbose>=1)
+        print_message("Combine results")
+
+    hashLink <- buildHashLink(K)
+
+    
+    ## original - hotspots versus rest of genome
+    x <- apply(
+        hashLink[,(ncol(hashLink)+1-K):ncol(hashLink)],
+        1,
+        hashF,
+        K=K
+    ) + 1 ## re-order
+    compO1 <- makeCompO2(
+        r = cbind(hotCenterSeq[x]+ hotEdgesSeq[x],coldSeq[x]),
+        which = array(TRUE,4**K),
+        hashLink = hashLink,
+        K = K,
+        num = 2
+    )
+    out1 <- getORAndP(
+        compO = compO1,
+        K = K,
+        num = 2,
+        nCores = nCores,
+        verbose = FALSE,
+        data = NULL,
+        gc.content = NULL,
+        CG = NULL,
+        version = "robbie",
+        comp2 = NULL,
+        outFile = NULL,
+        cgte = 0,
+        pvalmet = "chisq",
+        rgte = 0
+    )
+
+    
+    ##
+    ## also - hotspots vs edges
+    ##
+    compO2=makeCompO2(r=cbind(hotCenterSeq[x],hotEdgesSeq[x]),which=array(TRUE,4**K),hashLink=hashLink,K=K,num=2)
+    out2=getORAndP(compO=compO2,K=K,num=2,nCores=nCores,verbose=FALSE,data=NULL,gc.content=NULL,CG=NULL,version="robbie",comp2=NULL,outFile=NULL,cgte=0,pvalmet="chisq",rgte=0)
+    ##
+    ## also - hotspots in two parts vs rest of genome
+    ##
+    compO3=makeCompO2(r=cbind(hotCenterSeq[x],hotEdgesSeq[x],coldSeq[x]),which=array(TRUE,4**K),hashLink=hashLink,K=K,num=3)
+    out3=getORAndP(compO=compO3,K=K,num=3,nCores=nCores,verbose=FALSE,data=NULL,gc.content=NULL,CG=NULL,version="robbie",comp2=NULL,outFile=NULL,cgte=0,pvalmet="chisq",rgte=0)
+    
+    ##
+    ## return! both matrices
+    ##
+    compX1=cbind(out1$p[,1],out1$or[,1],compO1)
+    compX1=compX1[order(compX1[,1]),]
+    compX2=cbind(out2$p[,1],out2$or[,1],compO2)
+    compX2=compX2[order(compX2[,1]),]
+    compX3=cbind(out3$p,out3$or,compO3)
+    compX3=compX3[order(compX3[,1]),]
+    
+    if(verbose>=1)
+        print_message("Done searching for motif enrichment")
+
+    ## seqs here 1-4 numbers
+    seqs <- lapply(seqsH, function(seq) -1 + match(strsplit(seq, "")[[1]], c("A", "C", "G", "T")))
+    
+    return(
+        list(
+            compX1 = compX1,
+            compX2 = compX2,
+            compX3 = compX3,
+            seqs = seqs
+        )
+    )
 }
 
 
