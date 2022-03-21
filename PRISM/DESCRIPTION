@@ -1,0 +1,18 @@
+Package: PRISM
+Type: Package
+Title: PRISM - Probabilistic inference of sequence motifs
+Version: 0.1.0
+Date: 2022-03-21
+Author: Robert Davies and Simon Myers
+Maintainer: Robert William Davies <robertwilliamdavies@gmail.com>
+Description: PRISM infers sequence motifs from hotspots
+Installation: See website README
+Getting started: See website README
+License: GPL | file LICENSE
+Depends: parallel, gtools
+Imports: Rcpp
+LinkingTo: Rcpp, RcppArmadillo
+RoxygenNote: 7.1.1
+SystemRequirements: C++11
+NeedsCompilation: yes
+Suggests: testthat
