@@ -1,0 +1,16 @@
+test-data/
+test-results/
+*#*
+*~
+*.o
+*.so
+.Rhistory
+.DS_Store
+dependencies
+scratch
+testing
+TODO
+debug
+bams
+RData
+input
