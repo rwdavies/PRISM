@@ -18,8 +18,8 @@ if ( 1 == 0 ) {
 
 test_that("can run getMotifs using sequences", {
 
-    ## this acceptance test runs the motif finder using 10,000 hotspots
-    ## and 10,000 coldspots, where the hotspots are enriched for
+    ## this acceptance test runs the motif finder using several thousand
+    ## hotspots and coldspots, where the hotspots are enriched for
     ## the motif "seq" below, and further enriched in the centre
     ## of the hotspots for that sequence
     ## the code below runs the motif finder,
@@ -42,7 +42,7 @@ test_that("can run getMotifs using sequences", {
     )
 
     dir <- tempdir()
-    dir.create(dir)
+    dir.create(dir, showWarnings = FALSE)
     setwd(dir)
     
     ## only do simple k-mer version

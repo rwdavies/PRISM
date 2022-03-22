@@ -1,3 +1,4 @@
+#' @title simulate hotspots with motifs
 #' @param fracWithMotif what fraction contain motifs
 #' @param nMotifs how many motifs
 #' @param seq most likely characters in sequence

@@ -16,3 +16,4 @@ RoxygenNote: 7.1.1
 SystemRequirements: C++11
 NeedsCompilation: yes
 Suggests: testthat
+Encoding: UTF-8
