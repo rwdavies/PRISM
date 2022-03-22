@@ -583,7 +583,7 @@ getMotifs <- function(
 
         ##
         if (verbose >= 2) {
-            print_message("More background stuff")
+            print(paste("More background stuff - ",date(),sep=""))    
         }
         e=c("A","C","G","T")
         for(i in 1:2) e=c(paste("A",e,sep=""),paste("C",e,sep=""),paste("G",e,sep=""),paste("T",e,sep=""))

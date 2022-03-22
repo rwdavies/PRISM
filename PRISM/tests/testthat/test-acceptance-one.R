@@ -16,17 +16,19 @@ if ( 1 == 0 ) {
 
 test_that("can run getMotifs using sequences", {
 
+    seq <- 1 + c(0,3,0,1,0,2,1,1,3,3) ## ATACAGCCTT or AAGGCTGTAT
+    
     ## hotspots
     seqsH <- simulate_hotspots(
         fracWithMotif = 0.8,
         nMotifs = 10000,
-        seq = 1 + c(0,3,0,1,0,2,1,1,3,3)
+        seq = seq
     )
     ## coldspots
     seqsC <- simulate_hotspots(
         fracWithMotif = 0,
         nMotifs = 10000,
-        seq = 1 + c(0,3,0,1,0,2,1,1,3,3)
+        seq = seq
     )
 
     dir <- "~/test_plot/"
@@ -49,5 +51,11 @@ test_that("can run getMotifs using sequences", {
         pwmValue = 0.9,
         hotspotCenterDist = 200
     )
-    
+
+    ## check results here
+    inferred_seq <- apply(t(out$scoremat), 2, function(x) which.max(x))
+
+    ## checks forward vs backwards
+    check_inferred_vs_true_seq(inferred_seq, seq)
+
 })

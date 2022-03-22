@@ -10,7 +10,7 @@ simulate_hotspots <- function(
     n <- length(seq)
     prob <- 0.5 + 0.5*runif(n) # probability base not chosen at random
     seqsC <- lapply(1:nMotifs,function(iMotif) {
-        s <-sample(1:4,1000 + runif(1)*2000,replace=TRUE)
+        s <- sample(1:4, round(1000 + runif(1) * 2000), replace = TRUE)
         if(runif(1)<fracWithMotif) {
             ## give 80% probability to being in central 200 + 200 bp
             e=array(0.2/(length(s)-n-401),length(s)-n) # use this to make prob 80% for central 200 bp
@@ -29,5 +29,34 @@ simulate_hotspots <- function(
 }
     
 
-    
-    
+check_inferred_vs_true_seq <- function(inferred_seq, seq) {    
+    perfect_match <- FALSE
+    if (length(inferred_seq) > length(seq)) {
+        shorter <- seq
+        longer <- inferred_seq
+    } else {
+        shorter <- inferred_seq
+        longer <- seq
+    }
+    shorterR <- (4:1)[shorter[length(shorter):1]]
+    for(i in 1:(length(longer) - length(shorter) + 1)) {
+        check1 <- sum(abs(longer[i - 1 + 1:length(shorter)] - shorter))
+        check2 <- sum(abs(longer[i - 1 + 1:length(shorter)] - shorterR))
+        if (check1 == 0 | check2 == 0) {
+            perfect_match <- TRUE
+        }
+    }
+    if (!perfect_match) {
+        print(paste0(
+            "Could not find perfect match beetween longer=",
+            paste0(longer, collapse = ""),
+            " and shorter=",
+            paste0(shorter, collapse = ""),
+            " with shorterRC=",
+            paste0(shorterR, collapse = "")
+        ))
+        expect_equal(FALSE)
+    }
+    expect_equal(TRUE)
+    NULL
+}

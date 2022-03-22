@@ -484,7 +484,7 @@ getEnrichmentFromSequences <- function(
         a2 <- round(middle + hotspotCenterDist)
         
         hotCenterSeqX <- match(strsplit(substr(seq, a1, a2), "")[[1]], c("A", "C", "G", "T", "N"))
-        hotCenterSeqH <- simonHash2(hotCenterSeqX,K)
+        hotCenterSeqH <- simonHash2(hotCenterSeqX - 1,K) ## needs 0-based, is 1-based
         hotCenterSeq <- hotCenterSeq + increment(
             y = as.numeric(hotCenterSeqH),
             yT = as.integer(length(hotCenterSeqH)),
@@ -498,7 +498,7 @@ getEnrichmentFromSequences <- function(
             ),
             c("A", "C", "G", "T", "N")
         )
-        hotEdgesSeqH <- simonHash2(hotEdgesSeqX,K)
+        hotEdgesSeqH <- simonHash2(hotEdgesSeqX - 1,K)
         hotEdgesSeq <- hotEdgesSeq + increment(
             y = as.numeric(hotEdgesSeqH),
             yT = as.integer(length(hotEdgesSeqH)),
@@ -516,8 +516,8 @@ getEnrichmentFromSequences <- function(
         a2 <- round(middle + hotspotCenterDist)
         
         coldSeqX <- match(strsplit(seq, "")[[1]], c("A", "C", "G", "T", "N"))
-        coldSeqH <- simonHash2(coldSeqX,K)
-        coldSeqC <- increment(
+        coldSeqH <- simonHash2(coldSeqX - 1,K)
+        coldSeq <- coldSeq + increment(
             y = as.numeric(coldSeqH),
             yT = as.integer(length(coldSeqH)),
             xT = as.integer(4^K)
@@ -537,7 +537,7 @@ getEnrichmentFromSequences <- function(
         1,
         hashF,
         K=K
-    ) + 1 ## re-order
+    ) + 1 ## re-order (none performed)
     compO1 <- makeCompO2(
         r = cbind(hotCenterSeq[x]+ hotEdgesSeq[x],coldSeq[x]),
         which = array(TRUE,4**K),
@@ -545,6 +545,7 @@ getEnrichmentFromSequences <- function(
         K = K,
         num = 2
     )
+    
     out1 <- getORAndP(
         compO = compO1,
         K = K,
@@ -561,6 +562,8 @@ getEnrichmentFromSequences <- function(
         pvalmet = "chisq",
         rgte = 0
     )
+    compX1 <- cbind(out1$p[,1],out1$or[,1],compO1)
+    compX1 <- compX1[order(compX1[,1]),]
 
     
     ##
@@ -568,21 +571,17 @@ getEnrichmentFromSequences <- function(
     ##
     compO2=makeCompO2(r=cbind(hotCenterSeq[x],hotEdgesSeq[x]),which=array(TRUE,4**K),hashLink=hashLink,K=K,num=2)
     out2=getORAndP(compO=compO2,K=K,num=2,nCores=nCores,verbose=FALSE,data=NULL,gc.content=NULL,CG=NULL,version="robbie",comp2=NULL,outFile=NULL,cgte=0,pvalmet="chisq",rgte=0)
+    compX2=cbind(out2$p[,1],out2$or[,1],compO2)
+    compX2=compX2[order(compX2[,1]),]
+    
     ##
     ## also - hotspots in two parts vs rest of genome
     ##
     compO3=makeCompO2(r=cbind(hotCenterSeq[x],hotEdgesSeq[x],coldSeq[x]),which=array(TRUE,4**K),hashLink=hashLink,K=K,num=3)
     out3=getORAndP(compO=compO3,K=K,num=3,nCores=nCores,verbose=FALSE,data=NULL,gc.content=NULL,CG=NULL,version="robbie",comp2=NULL,outFile=NULL,cgte=0,pvalmet="chisq",rgte=0)
-    
-    ##
-    ## return! both matrices
-    ##
-    compX1=cbind(out1$p[,1],out1$or[,1],compO1)
-    compX1=compX1[order(compX1[,1]),]
-    compX2=cbind(out2$p[,1],out2$or[,1],compO2)
-    compX2=compX2[order(compX2[,1]),]
     compX3=cbind(out3$p,out3$or,compO3)
     compX3=compX3[order(compX3[,1]),]
+    
     
     if(verbose>=1)
         print_message("Done searching for motif enrichment")
