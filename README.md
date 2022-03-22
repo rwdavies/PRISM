@@ -9,7 +9,7 @@ PRISM is an R package for identifying sequence motifs from hotspots
 1. [Introduction](#paragraph-introduction)
 2. [Installation](#paragraph-installation)
 3. [Example](#paragraph-example)
-4. [Example](#paragraph-tests)
+4. [Tests](#paragraph-tests)
 
 ## Introduction <a name="paragraph-introduction"></a>
 
