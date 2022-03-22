@@ -652,25 +652,23 @@ makeBackground2=function(starts,ends,qvec,newqvec,index,nSequences,maxwidth)
 }
 
 
-getPriorMat=function(nSequences,starts,originalSequenceLength,motifLengths,posmat,prior,alpha)
-{
-  rm(priormat,endpos)
-  endpos=array(0,nSequences * length(starts))
-  for(j in 1:length(starts))
-    endpos[(nSequences * (j-1) + 1): (nSequences*j)]=originalSequenceLength-motifLengths[j]+1
-  endpos=c(endpos)
-  priormat=posmat/endpos
-  priormat[priormat>1]=0 # get rid of the other side
-  priormat=priormat-1/endpos
-  priormat=floor(priormat*10)+1
-  for(i in 1:10) priormat[priormat==i]=prior[i]
-  priormat[priormat<=0]=0
-  priormat[priormat>10]=0
-  priormat=priormat/rowSums(priormat)/2
-  # october 6 2015 - added into here - cleaner
-  for(j in 1:length(starts))
-    priormat[(nSequences*(j-1)+1):(nSequences*j),]=priormat[(nSequences*(j-1)+1):(nSequences*j),]*alpha[j];
-  return(list(endpos=endpos,priormat=priormat))
+getPriorMat <- function(nSequences,starts,originalSequenceLength,motifLengths,posmat,prior,alpha) {
+    endpos=array(0,nSequences * length(starts))
+    for(j in 1:length(starts))
+        endpos[(nSequences * (j-1) + 1): (nSequences*j)]=originalSequenceLength-motifLengths[j]+1
+    endpos=c(endpos)
+    priormat=posmat/endpos
+    priormat[priormat>1]=0 # get rid of the other side
+    priormat=priormat-1/endpos
+    priormat=floor(priormat*10)+1
+    for(i in 1:10) priormat[priormat==i]=prior[i]
+    priormat[priormat<=0]=0
+    priormat[priormat>10]=0
+    priormat=priormat/rowSums(priormat)/2
+    ## october 6 2015 - added into here - cleaner
+    for(j in 1:length(starts))
+        priormat[(nSequences*(j-1)+1):(nSequences*j),]=priormat[(nSequences*(j-1)+1):(nSequences*j),]*alpha[j];
+    return(list(endpos=endpos,priormat=priormat))
 }
 
 

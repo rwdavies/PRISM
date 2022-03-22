@@ -656,9 +656,10 @@ getEnrichmentFromSequences <- function(
 #' @param eligible Which k-mers are eligible to be considered
 #' @param verbose Verbosity. 1 = Full
 #' @export
-initializePWM=function(motifEnrichment,K=8,initializationMethod="simple",eligible=NULL,verbose=1,pwmValue=0.9)
-{
-  if(verbose>=1) print(paste("Initialize PWM, ",date(),sep=""))
+initializePWM <- function(motifEnrichment,K=8,initializationMethod="simple",eligible=NULL,verbose=1,pwmValue=0.9) {
+    if(verbose>=1) {
+        print_message("Initialize PWM")
+    }
   # these aren't sorted
   compX2=motifEnrichment$compX2
   compX3=motifEnrichment$compX3
@@ -705,8 +706,10 @@ initializePWM=function(motifEnrichment,K=8,initializationMethod="simple",eligibl
     eligible[whichPWM]=FALSE
     pwm=NULL
  }
-  if(verbose>=1) print(paste("Done initializing PWM, ",date(),sep=""))
-  return(list(pwm=pwm,dimvec=dimvec,scorematset=scorematset,findWordsOut=findWordsOut))
+    if(verbose>=1) {
+        print_message("Done initializing PWM")
+    }
+    return(list(pwm=pwm,dimvec=dimvec,scorematset=scorematset,findWordsOut=findWordsOut))
 }
 
 

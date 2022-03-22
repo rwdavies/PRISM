@@ -70,9 +70,9 @@ getMotifs <- function(
 
     ## NOTE - assume sequences already sanity checked for maximum and minimum lengths
     if(verbose>=1) {
-        print(paste(" ------------------------------------------------------- ",sep=""))
-        print(paste(" ---- Program Initializing ",date()," -----",sep=""))
-        print(paste(" ------------------------------------------------------- ",sep=""))
+        print_message(" ------------------------------------------------------- ")
+        print_message(" ---- Program Initializing ----------------------------- ")
+        print_message(" ------------------------------------------------------- ")
     }
 
 
@@ -192,7 +192,7 @@ getMotifs <- function(
     ##
     alphas=matrix(nrow=0,ncol=length(dimvec))
     if(length(alpha)!=length(dimvec)){
-	print("Initialising fractions as uniform")
+	print_message("Initialising fractions as uniform")
 	alpha=rep(1/length(dimvec),length(dimvec))/2
     }
     logfact=cumsum(log(1:(length(seqs)+4)))
@@ -256,25 +256,31 @@ getMotifs <- function(
     while(its<=maxits) {
         
         its=its+1
-        if(verbose>=1)   print(paste("-------- Start it=",its," -------- " ,date(),sep=""))
+        if(verbose>=1)   {
+            print_message(paste0("-------- Start it=",its," -------- "))
+        }
 
 
 
         ##
         ## setup! 
         ##
-        if(verbose>=2)  print(paste("Setting up - ",date()))
-                                        #
+        if(verbose>=2)  {
+            print_message("Setting up")
+        }
+        ##
         ## get start and end positions of each motif within the score matrix.
         ## note need to do this each time, as size of things can change
-                                        #
+        ##
         starts=c(1,cumsum(dimvec)+1)
         starts=starts[1:length(dimvec)]
         ends=cumsum(dimvec)
         motifLengths=ends-starts+1
-                                        #print(paste("starts - ",starts,collapse=","))
-                                        #print(paste("ends - ",ends,collapse=","))
-        if(verbose>=2)   print(paste("dimvec - ",dimvec,collapse=","))    
+        ##print(paste("starts - ",starts,collapse=","))
+        ##print(paste("ends - ",ends,collapse=","))
+        if(verbose>=2)   {
+            print_message(paste0("dimvec - ",dimvec,collapse=","))
+        }
         ##score
         bestpos=matrix(0,nrow=length(seqs),ncol=length(starts))
         beststrand=bestpos
@@ -301,9 +307,13 @@ getMotifs <- function(
         ##
         ## start some probability initialization
         ##
-        if(verbose>=2)   print(paste("Beginning scoring - ",date()))
+        if(verbose>=2)   {
+            print_message("Beginning scoring")
+        }
         for(j in 1:length(starts)) {
-            if(verbose>=2)     print(paste("Scoring motif ",j," - ",date())) 
+            if(verbose>=2)    {
+                print_message(paste0("Scoring motif ",j))
+            }
                                         #
             scoremat=scorematset[starts[j]:ends[j],]
             scoremat=cbind(scoremat,rep(-10000,nrow(scoremat))) #nick removed pointless maxwidth=200 setting
@@ -365,7 +375,9 @@ getMotifs <- function(
         ##
         ## set up background
         ##
-        if(verbose>=2)   print(paste("Set up background - ",date(),sep=""))
+        if(verbose>=2) {
+            print_message("Set up background")
+        }
         out=setUpBackground(bg=bg,qvec=qvec,originalSequenceLength=originalSequenceLength,newmat=newmat,bgstore=bgstore,qvecstore=qvecstore,bg2=bg2)
         bg=out$bg
         bgstore=out$bgstore
@@ -378,7 +390,9 @@ getMotifs <- function(
         ## make a background matrix for the different motifs, based on newqvec
         ##
                                         # backMethod==1 - original background method
-        if(verbose>=2)   print(paste("Putting in background information - ",date(),sep=""))
+        if(verbose>=2)   {
+            print_message("Putting in background information")
+        }
                                         #out=makeBackground2(starts=starts,ends=ends,qvec=qvec,newqvec=newqvec,index=index,nSequences=nSequences,maxwidth=maxwidth)
         out=makeBackground2(starts=starts,ends=ends,qvec=qvec,newqvec=newqvec,index=index,nSequences=nSequences,maxwidth=maxwidth)
         background=out$background
@@ -398,7 +412,9 @@ getMotifs <- function(
         ## get prior mat
         ##
                                         # priormat is a matrix of nrow = nSequences, 1 entry per site, equal to the prior probability of it being in that region
-        if(verbose>=2)   print(paste("Get prior matrix - ",date(),sep=""))
+        if(verbose>=2)   {
+            print_message("Get prior matrix")
+        }
         out=getPriorMat(nSequences=nSequences,starts=starts,originalSequenceLength=originalSequenceLength,motifLengths=motifLengths,posmat=posmat,prior=prior,alpha=alpha)
         endpos=out$endpos
         priormat=out$priormat
@@ -413,7 +429,9 @@ getMotifs <- function(
         ##
         ## sampling probabilities for motifs
         ##
-        if(verbose>=2) print(paste("Make sampling matrix - ",date(),sep=""))
+        if(verbose>=2) {
+            print_message("Make sampling matrix")
+        }
                                         #
                                         # samplemat has rows equal to number of sequences, 1 set of columns for each 
                                         # motif. later, use cumulative sums to determine 
@@ -423,17 +441,19 @@ getMotifs <- function(
         postbackward=exp(overallscores2) * priormat
         samplemat=matrix(nrow=nrow(newmat),ncol=maxwidth*length(starts)*2)
         s=maxwidth
-        for(j in 1:length(starts))
-        {
+        for(j in 1:length(starts)) {
             samplemat[,(s*(j-1)*2+1):(s*(2*j-1))]=postforward[(nSequences*(j-1)+1):(nSequences*j),];
             samplemat[,(s*(2*j-1)+1):(s*(2*j))]=postbackward[(nSequences*(j-1)+1):(nSequences*j),];
         } 
         samplemat=samplemat/(rowSums(samplemat)+(1-sum(alpha)))
 
+        
         ##
         ## sampling! 
         ##
-        if(verbose>=2)   print(paste("Determine state probabilities - ",date(),sep=""))
+        if(verbose>=2) {
+            print_message("Determine state probabilities")
+        }
         ##need to record which motif if any
         ##which strand
         ##best position,  best strand
@@ -456,7 +476,9 @@ getMotifs <- function(
         ##
         ## sampling! 
         ##
-        if(verbose>=2)   print(paste("Sample motif locations and whether bound - ",date(),sep=""))
+        if(verbose>=2)   {
+            print_message("Sample motif locations and whether bound")
+        }
         mot=array(0,nSequences)
         testmat=samplemat
         for(j in 2:ncol(samplemat))
@@ -495,8 +517,14 @@ getMotifs <- function(
         ##alphanew=rbeta(1,shape1=sum(mot==1)+1,shape2=sum(mot==0)+1)
 ####sample start pos
         alphanew=alphanew[1:length(starts)]
-        if(verbose>=2)   print("Alpha values sampled:")
-        if(verbose>=2)   print(c(alphanew,sum(alphanew)))
+        if(verbose>=2)   {
+            print_message(
+                paste0(
+                    "Alpha values sampled:",
+                    paste0(c(alphanew,sum(alphanew)), collapse = ", ")
+                )
+            )
+        }
         whichregs=which(mot==1)
         v=hist((whichpos-1)/(originalSequenceLength[whichregs]-dimvec[whichmot]),breaks=seq(0,1,0.1),plot=FALSE)
         saveForHist=(whichpos-1)/(originalSequenceLength[whichregs]-dimvec[whichmot])
@@ -516,7 +544,9 @@ getMotifs <- function(
         ##
         ##
         strand=whichstrand
-        if(verbose>=2)   print(paste("Sampling sequences - ",date(),sep=""))
+        if(verbose>=2)   {
+            print_message("Sampling sequences")
+        }
         bg=bgstore
         qvec=qvecstore
         ourcounts=matrix(nrow=65,ncol=0)
@@ -585,7 +615,7 @@ getMotifs <- function(
 
         ##
         if (verbose >= 2) {
-            print(paste("More background stuff - ",date(),sep=""))    
+            print_message("More background stuff")
         }
         e=c("A","C","G","T")
         for(i in 1:2) e=c(paste("A",e,sep=""),paste("C",e,sep=""),paste("G",e,sep=""),paste("T",e,sep=""))
@@ -605,7 +635,9 @@ getMotifs <- function(
         ##
         ## get some vectors
         ##
-        if(verbose>=2) print(paste("Get prediction vectors - ",date(),sep=""))    
+        if(verbose>=2) {
+            print_message("Get prediction vectors")
+        }
         out=getPredFrac(
             starts = starts,
             qvec = qvec,
@@ -621,7 +653,9 @@ getMotifs <- function(
         ##
         ## 
         ##
-        if(verbose>=2)   print(paste("Summarizing - ",date(),sep=""))      
+        if(verbose>=2)   {
+            print_message("Summarizing")
+        }
         newnewdim=vector(length=0)
         newmatset=matrix(nrow=0,ncol=4)
         bindmatset=matrix(nrow=0,ncol=4)
@@ -685,7 +719,9 @@ getMotifs <- function(
         ##
         ## set new params
         ##
-        if(verbose>=2)   print(paste("Set new params - ",date(),sep=""))
+        if(verbose>=2)  {
+            print_message("Set new params")
+        }
         scorematsetold=scorematset
         if(updatealpha==1) alpha=alphanew
         if(updatemot==1)
@@ -697,9 +733,8 @@ getMotifs <- function(
         }
         alphas=rbind(alphas,alpha)
         ##remove motifs if not viable
-        if(min(length(fullseqs)*alpha)<=10)
-        {
-            print("Some motifs have <=10 expected copies, removing")
+        if(min(length(fullseqs)*alpha)<=10) {
+            print_message("Some motifs have <=10 expected copies, removing")
             print(which(length(fullseqs)*alpha<=10))
             newmat=matrix(nrow=0,ncol=4)
             newmat2=matrix(nrow=0,ncol=4)
@@ -720,10 +755,9 @@ getMotifs <- function(
             alphas=alphas[,length(fullseqs)*alpha>10]
             alpha=alpha[length(fullseqs)*alpha>10]
         }
-###remove motifs if not long enough
-        if(min(dimvec)<=3)
-        {
-            print("Some motifs have  length <=3, removing")
+        ##remove motifs if not long enough
+        if(min(dimvec)<=3) {
+            print_message("Some motifs have  length <=3, removing")
             print(which(dimvec<=3))
             newmat=matrix(nrow=0,ncol=4)
             newmat2=matrix(nrow=0,ncol=4)
@@ -740,7 +774,7 @@ getMotifs <- function(
             scorematset=newmat
             bindmatset=newmat2
             scorematset=newmat
-###remove offending motif
+            ##remove offending motif
             alphas=alphas[,dimvec>3]
             alpha=alpha[dimvec>3]
             dimvec=dimvec[dimvec>3]
@@ -750,7 +784,9 @@ getMotifs <- function(
         ##
         ## plot here
         ##
-        if(verbose>=2)   print(paste("Plotting - ",date(),sep=""))  
+        if(verbose>=2)   {
+            print_message("Plotting")
+        }
         if(plotting=="pdf" | plotting=="screen")  plotIteration2(plotting=plotting,fileName=paste(plotPrefix,".it.",its,".pdf",sep=""),dimvec=dimvec,scorematset=scorematset,height=4,width=16,saveForHistL=saveForHistL,whichmot=whichmot,nSequences=nSequences,regprobs=regprobs,its=its)
 
 
@@ -763,9 +799,11 @@ getMotifs <- function(
 
 
 
-    if(verbose>=1) print(paste(" --------------------------------------------- ",sep=""))
-    if(verbose>=1)  print(paste(" ----- Program Done ",date()," -----", sep=""))
-    if(verbose>=1)  print(paste(" --------------------------------------------- ",sep=""))
+    if(verbose>=1) {
+        print_message(" ----------------------------------")
+        print_message(" ----- Program Done ---------------")
+        print_message(" ----------------------------------")        
+    }
 
     ##
     ##  end of iterations

@@ -26,17 +26,18 @@ test_that("can run getMotifs using sequences", {
     ## then check that the returned motif is a good match to the true one
     
     seq <- 1 + c(0,3,0,1,0,2,1,1,3,3) ## ATACAGCCTT or AAGGCTGTAT
+    nMotifs <- 2000
     
     ## hotspots
     seqsH <- simulate_hotspots(
         fracWithMotif = 0.8,
-        nMotifs = 10000,
+        nMotifs = nMotifs,
         seq = seq
     )
     ## coldspots
     seqsC <- simulate_hotspots(
         fracWithMotif = 0,
-        nMotifs = 10000,
+        nMotifs = nMotifs,
         seq = seq
     )
 
