@@ -16,6 +16,13 @@ if ( 1 == 0 ) {
 
 test_that("can run getMotifs using sequences", {
 
+    ## this acceptance test runs the motif finder using 10,000 hotspots
+    ## and 10,000 coldspots, where the hotspots are enriched for
+    ## the motif "seq" below, and further enriched in the centre
+    ## of the hotspots for that sequence
+    ## the code below runs the motif finder,
+    ## then check that the returned motif is a good match to the true one
+    
     seq <- 1 + c(0,3,0,1,0,2,1,1,3,3) ## ATACAGCCTT or AAGGCTGTAT
     
     ## hotspots
@@ -31,7 +38,7 @@ test_that("can run getMotifs using sequences", {
         seq = seq
     )
 
-    dir <- "~/test_plot/"
+    dir <- tempdir()
     dir.create(dir)
     setwd(dir)
     
