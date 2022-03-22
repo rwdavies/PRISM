@@ -6,6 +6,7 @@
 #' @param eligible k-mers already used as seeds (or NULL)
 #' @param nCores Number of computer cores to use
 #' @param K Length of k-mers to consider for seeding
+#' @param fasta Path to fasta file
 #' @param rmsk Path to repeat masker file (assumes preparation already performed)
 #' @param simpleRepeats Path to simple repeats file (assumes preparation already performed)
 #' @param initializationMethod Whether to initialize using a single top k-mer (simple), by constructing a rudimentary PWM (advanced), or to use pre-existing motif probabilities (existing)
@@ -37,6 +38,7 @@ getMotifs <- function(
     K=8,
     hotspotCenterDist=200,
     filterSequences=FALSE,
+    fasta=NULL,
     rmsk=NULL,
     simpleRepeats=NULL,
     discovery=TRUE,
@@ -90,10 +92,10 @@ getMotifs <- function(
                 K = K,
                 hotspotCenterDist = hotspotCenterDist,
                 filterSequences = TRUE,
+                fasta = fasta,
                 rmsk = rmsk,
                 simpleRepeats = simpleRepeats,
-                verbose = verbose,
-                dataType = dataType
+                verbose = verbose
             )
         } else {
             motifEnrichment <- getEnrichmentFromSequences(

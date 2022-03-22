@@ -35,7 +35,7 @@ hashFC=function(x,K) sum((3-x[K:1])*4^(0:(K-1)))
 hashM=function(x,K)  min(hashF(x,K),hashFC(x,K))
 conv=function(x,K) 3-x[K:1]
 
-simonHash2 <- function(seqv,K) {
+simonHash2 <- function(seqv,K, check = FALSE) {
     ## fixed from simonHash - was backwards!!!
     nonrep <- array(0,length(seqv)-K+1)
     for(i in 1:K) {
@@ -44,6 +44,15 @@ simonHash2 <- function(seqv,K) {
         nonrep[z>3]=-Inf
     }
     nonrep2 <- nonrep[!is.infinite(nonrep)]+1
+    if (check) {
+        if (sum(is.na(nonrep2)) > 0) {
+            stop("Something went wrong, simonHash2 has NA values")
+        } else if (min(nonrep2) < 1) {
+            stop("Something went wrong, simonHash2 wants to return values < 1")
+        } else if (max(nonrep2) > 4 ** K) {
+            stop("Something went wrong, simonHash2 wants to return values > 4 ** K")
+        }
+    }
     return(nonrep2)
 }
   

@@ -252,8 +252,19 @@ callHotspots=function(prefix,suffix,chrList,minRate=10,minFrac=0.8,minLength=100
 
 
 
-
-
+check_and_shrink_hot <- function(hotC, ref, chr) {
+    keep <- rep(TRUE, nrow(hotC))
+    for(i in 1:nrow(hotC)) {
+        if (hotC[i, 1] > length(ref)) {
+            keep[i] <- FALSE
+        }
+    }
+    if (sum(keep) > 0) {
+        warning(paste0("chromosome ", chr, " has ", sum(!keep), " out of ", length(keep), " hotspots outside of the reference genome. This suggests an incorrect use of reference genome for the given hotspots"))
+        hotC <- hotC[keep, ]
+    }
+    hotC
+}
 
 
 
@@ -265,6 +276,7 @@ callHotspots=function(prefix,suffix,chrList,minRate=10,minFrac=0.8,minLength=100
 #' @param K k-mer length to seed over
 #' @param nCores How many computer cores to use
 #' @param filterSequences Whether to filter hotspots for repeats and simple repeats
+#' @param fasta Path to fasta file
 #' @param rmsk Path to repeat masker file
 #' @param simpleRepeats Path to simple repeats file
 #' @param verbose whether to print messages. 2 = frequent, 1 = moderate, 0 = No
@@ -277,6 +289,7 @@ getEnrichment <- function(
     K = 8,
     nCores = 1,
     filterSequences = TRUE,
+    fasta = NULL,
     rmsk = NULL,
     simpleRepeats = NULL,
     verbose = 1
@@ -302,8 +315,12 @@ getEnrichment <- function(
             print(paste("Load chromosome ",chr,", ",date(),sep=""))
         
         ## load ref
-        load(paste(fasta,".",chr,".RData",sep=""))
-        ref[ref==-1]=4 
+        file <- paste(fasta,".",chr,".RData",sep="")
+        if (!file.exists(file)) {
+            stop(paste0("Cannot find file:", file))
+        }
+        load(file)
+        ref[ref==-1]=4  ## OK so 4 is bad
         ## mask out repeats
         if(filterSequences==TRUE) {
             load(paste(rmsk,".",chr,".RData",sep=""))
@@ -312,26 +329,27 @@ getEnrichment <- function(
             load(paste(simpleRepeats,".",chr,".RData",sep=""))
             for(i in 1:nrow(rep)) ref[ (rep[i,"chromStart"]+1):rep[i,"chromEnd"]]=4
         }
-        ##
+        
         ## mask our previous hotspots
-        ##
-        if(length(hotExclude)>0)
-        {
+        if(length(hotExclude)>0) {
             coldL=hotExclude[hotExclude[,"Chr"]==chr,]
-            if(length(coldL)>0)
-            {
+            if(length(coldL)>0) {
                 for(i in 1:nrow(coldL))
                     ref[coldL[i,2]:coldL[i,3]]=4
             }
         }
-        ##
+
+        
         ## get hotspots
-        ##
-        hotL=hot[hot[,"Chr"]==chr,]
+        hotL <- hot[hot[,"Chr"]==chr,]
+        hotL2 <- cbind(as.integer(hotL[,2]),as.integer(hotL[,3]))
+        hotL2 <- check_and_shrink_hot(hotL2, ref, chr)
+        
         seqs=lapply(1:nrow(hotL),function(i) {
             x=hotL[i,]
             return(ref[as.integer(x["Pos_start_bp"]):as.integer(x["Pos_end_bp"])])
         })
+        
         ## in hotspot, in middle 200 bases
         hotC=t(apply(hotL[,c("Pos_start_bp","Pos_end_bp")],1,function(x) {
             x=as.integer(x)
@@ -339,25 +357,28 @@ getEnrichment <- function(
             a2=round(mean(x)+hotspotCenterDist)
             return(c(max(a1,x[1]),min(a2,x[2])))
         }))
-
+        hotC <- check_and_shrink_hot(hotC, ref, chr)
+        
         
         ## get positions of those within or outside 
-        inhotCenter=unique(unlist(apply(hotC,1,function(x) seq(x[1],x[2]))))
-        hotL2=cbind(as.integer(hotL[,2]),as.integer(hotL[,3]))
-        inhot=unique(unlist(apply(hotL2,1,function(x) seq(x[1],x[2]))))
-        inhotEdges=setdiff(inhot,inhotCenter)
+        inhotCenter <- unique(unlist(apply(hotC,1,function(x) seq(x[1],x[2]))))
+        inhot <- unique(unlist(apply(hotL2,1,function(x) seq(x[1],x[2]))))
+        inhotEdges <- setdiff(inhot,inhotCenter)
         ## get the sequences involved!
-        hotCenterSeq=ref[inhotCenter]
-        hotEdgesSeq=ref[inhotEdges]        
-        coldSeq=ref[-inhot] ## rest of genome!
+        hotCenterSeq <- ref[inhotCenter]
+        hotEdgesSeq <- ref[inhotEdges]        
+        coldSeq <- ref[-inhot] ## rest of genome!
+        
         ## hash
-        hotCenterSeqH=simonHash2(hotCenterSeq,K)
-        hotEdgesSeqH=simonHash2(hotEdgesSeq,K) 
-        coldSeqH=simonHash2(coldSeq,K)  
+        hotCenterSeqH <- simonHash2(hotCenterSeq, K, check = TRUE)
+        hotEdgesSeqH <- simonHash2(hotEdgesSeq, K, check = TRUE) 
+        coldSeqH <- simonHash2(coldSeq, K, check = TRUE)
+        
         ## count - note - simonHash2 is 1-based, so remove first entry
-        hotCenterSeqC=increment(y=as.numeric(hotCenterSeqH),yT=as.integer(length(hotCenterSeqH)),xT=as.integer(4^K))[-1]
-        hotEdgesSeqC=increment(y=as.numeric(hotEdgesSeqH),yT=as.integer(length(hotEdgesSeqH)),xT=as.integer(4^K))[-1]
-        coldSeqC=increment(y=as.numeric(coldSeqH),yT=as.integer(length(coldSeqH)),xT=as.integer(4^K))[-1]
+        hotCenterSeqC <- increment(y=as.numeric(hotCenterSeqH),yT=as.integer(length(hotCenterSeqH)),xT=as.integer(4^K))[-1]
+        hotEdgesSeqC <- increment(y=as.numeric(hotEdgesSeqH),yT=as.integer(length(hotEdgesSeqH)),xT=as.integer(4^K))[-1]
+        coldSeqC <- increment(y=as.numeric(coldSeqH),yT=as.integer(length(coldSeqH)),xT=as.integer(4^K))[-1]
+        
         ## return counts
         if(verbose>=2) print(paste("Done chromosome ",chr,", ",date(),sep=""))    
         return(
@@ -374,11 +395,7 @@ getEnrichment <- function(
     ##
     ## check for errors
     ##
-    a=sapply(out,function(x) length(x))
-    if(sum(a!=4)>0) {
-        print("WARNING - getEnrichment failed")
-        print(out[[which.min(a<4)]])
-    }
+    check_mclapply_OK(out, "an error occured during getEnrichment")
     
     ##
     ## get sequences

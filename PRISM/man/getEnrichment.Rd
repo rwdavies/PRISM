@@ -12,6 +12,7 @@ getEnrichment(
   K = 8,
   nCores = 1,
   filterSequences = TRUE,
+  fasta = NULL,
   rmsk = NULL,
   simpleRepeats = NULL,
   verbose = 1
@@ -29,6 +30,8 @@ getEnrichment(
 \item{nCores}{How many computer cores to use}
 
 \item{filterSequences}{Whether to filter hotspots for repeats and simple repeats}
+
+\item{fasta}{Path to fasta file}
 
 \item{rmsk}{Path to repeat masker file}
 

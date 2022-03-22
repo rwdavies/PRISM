@@ -14,6 +14,7 @@ getMotifs(
   K = 8,
   hotspotCenterDist = 200,
   filterSequences = FALSE,
+  fasta = NULL,
   rmsk = NULL,
   simpleRepeats = NULL,
   discovery = TRUE,
@@ -51,6 +52,8 @@ getMotifs(
 \item{nCores}{Number of computer cores to use}
 
 \item{K}{Length of k-mers to consider for seeding}
+
+\item{fasta}{Path to fasta file}
 
 \item{rmsk}{Path to repeat masker file (assumes preparation already performed)}
 

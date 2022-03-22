@@ -1,5 +1,6 @@
 if ( 1 == 0 ) {
-    
+
+    curdir <- getwd()
     library("testthat")
     library("PRISM")
     dir <- "~/proj/PRISM/"
@@ -10,6 +11,7 @@ if ( 1 == 0 ) {
         a <- a[-b]
     }
     o <- sapply(a, source)
+    setwd(curdir)
 
 
 }

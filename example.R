@@ -1,3 +1,8 @@
+## load library
+library("PRISM")
+
+
+
 ##
 ## 0 - setup
 ##
@@ -16,10 +21,6 @@ simpleRepeats <- "simpleRepeat.hg19.gz" # path to simple repeats file
 hotspotsFile <- "hotspots.RData" # original
 hotspotsFile <- "AA_Maphotspots.RData" # one of the other ones
 hotspotsFile <- "CEU_LDhotspots.RData"; chrList=1:22
-
-
-# load library
-library("PRISM")
 
 
 
@@ -54,9 +55,13 @@ prepRepeat(
 )
 
 
+
+
+
+
+
 ## ## call hotspots - first, unpack some recombination rate map files
 ## system("tar -xzvf genetic_map_HapMapII_GRCh37.tar.gz")
-
 
 ## ## call hotspots - see ?callHotspots for full explanation and parameter options
 ## ## note - can use maxLength to filter out those that are too long
@@ -77,28 +82,28 @@ prepRepeat(
 ##
 ## african american hotspots
 ##
-system("wget http://www.well.ox.ac.uk/~anjali/AAmap/aamap.tar.gz")
-system("tar -xzvf aamap.tar.gz")
+## system("wget http://www.well.ox.ac.uk/~anjali/AAmap/aamap.tar.gz")
+## system("tar -xzvf aamap.tar.gz")
 
-## fix 
-for(chr in chrList) {
-  data=read.table(paste("AAmap/AAmap.chr",chr,".txt",sep=""),header=TRUE)
-  data=cbind(data,1e6*c((data[-1,2]-data[-nrow(data),2])/(data[-1,1]-data[-nrow(data),1]),0))
-  colnames(data)[3]="rate"
-  write.table(data,file=paste("AAmap/AAmap.chr",chr,".modified.txt",sep=""),row.names=FALSE,col.names=TRUE,sep="\t",quote=FALSE)
-}
+## ## fix 
+## for(chr in chrList) {
+##   data=read.table(paste("AAmap/AAmap.chr",chr,".txt",sep=""),header=TRUE)
+##   data=cbind(data,1e6*c((data[-1,2]-data[-nrow(data),2])/(data[-1,1]-data[-nrow(data),1]),0))
+##   colnames(data)[3]="rate"
+##   write.table(data,file=paste("AAmap/AAmap.chr",chr,".modified.txt",sep=""),row.names=FALSE,col.names=TRUE,sep="\t",quote=FALSE)
+## }
 
-hot <- callHotspots(
-    prefix = "AAmap/AAmap.chr",
-    suffix = ".modified.txt",
-    chrList = chrList,
-    nCores = nCores,
-    verbose = 2,
-    maxLength = 3000,
-    positionColumn = "Physical_Position_Build36.hg18.",
-    rateColumn = "rate"
-)
-save(hot, file = "AAhotspots.RData")
+## hot <- callHotspots(
+##     prefix = "AAmap/AAmap.chr",
+##     suffix = ".modified.txt",
+##     chrList = chrList,
+##     nCores = nCores,
+##     verbose = 2,
+##     maxLength = 3000,
+##     positionColumn = "Physical_Position_Build36.hg18.",
+##     rateColumn = "rate"
+## )
+## save(hot, file = "AAhotspots.RData")
 
 ##
 ## call broad hotspot set
@@ -119,7 +124,8 @@ for(chr in chrList) {
 }
 
 ## call hotspots in each
-for(col in c("deCODE","COMBINED_LD","YRI_LD","CEU_LD","AA_Map","African_Enriched","Shared_Map")) {
+##for(col in c("deCODE","COMBINED_LD","YRI_LD","CEU_LD","AA_Map","African_Enriched","Shared_Map")) {
+for(col in c("CEU_LD")) {    
     hot <- callHotspots(
         prefix = "maps_b37/maps_chr.",
         suffix = ".modified.txt",
@@ -134,10 +140,12 @@ for(col in c("deCODE","COMBINED_LD","YRI_LD","CEU_LD","AA_Map","African_Enriched
 }
 
 ## check
-for(col in c("deCODE","COMBINED_LD","YRI_LD","CEU_LD","AA_Map","African_Enriched","Shared_Map"))
-{
-  load(file=paste(col,"hotspots.RData",sep=""))
-  print(c(col,nrow(hot)))
+for(col in c("deCODE","COMBINED_LD","YRI_LD","CEU_LD","AA_Map","African_Enriched","Shared_Map")) {
+    file <- paste(col,"hotspots.RData",sep="")
+    if (file.exists(file)) {
+        load(file=file)
+        print(c(col,nrow(hot)))
+    }
 }
 
 
@@ -157,7 +165,9 @@ for(col in c("deCODE","COMBINED_LD","YRI_LD","CEU_LD","AA_Map","African_Enriched
 ##
 
 ## find a highly enriched k-mer in the hotspots, with central enrichment, and use this to find one motif
-hotspotsFile <- "AAhotspots.RData" # one of the other ones
+setwd(workdir)
+##hotspotsFile <- "AAhotspots.RData" # one of the other ones
+hotspotsFile <- "CEU_LDhotspots.RData"
 load(hotspotsFile)
 use <- array(TRUE,nrow(hot))
 dir <- "plots6/"
@@ -177,6 +187,7 @@ for(iMotif in 1:2) {
       verbose = 2,
       nCores = nCores,
       filterSequences = TRUE,
+      fasta = fasta,
       rmsk = rmsk,
       simpleRepeats = simpleRepeats,
       maxits = 10,
