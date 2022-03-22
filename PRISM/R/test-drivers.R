@@ -55,8 +55,8 @@ check_inferred_vs_true_seq <- function(inferred_seq, seq) {
             " with shorterRC=",
             paste0(shorterR, collapse = "")
         ))
-        expect_equal(FALSE)
+        expect_true(FALSE)
     }
-    expect_equal(TRUE)
+    expect_true(TRUE) ## 
     NULL
 }
