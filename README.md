@@ -1,6 +1,8 @@
 PRISM (Probabilistic inference of sequence motifs)
 ==================================================
 
+![Build Status](https://github.com/rwdavies/PRISM/actions/workflows/main.yml/badge.svg)
+
 PRISM is an R package for identifying sequence motifs from hotspots
 
 # Table of contents
